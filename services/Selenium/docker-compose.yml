@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  selenium-hub:
+    image: selenium/hub:4.25.0
+    ports:
+      - "4444:4444"
+    networks:
+      - selenium-network
+      - traefik_web
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.selenium-hub.rule=Host(`selenium-hub.example.com`)"
+      - "traefik.http.routers.selenium-hub.entrypoints=web"
+      - "traefik.http.services.selenium-hub.loadbalancer.server.port=4444"
+      - "traefik.http.routers.selenium-hub.service=selenium-hub"
+
+  chrome-node:
+    image: selenium/node-chrome:129.0
+    container_name: chrome-node
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    networks:
+      - selenium-network
+
+networks:
+  selenium-network:
+    driver: overlay
+    attachable: true
+  traefik_web:
+    external: true
