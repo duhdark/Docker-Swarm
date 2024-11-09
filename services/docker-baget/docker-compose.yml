@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  nuget-server:
+    image: loicsharma/baget:0.4.0-preview2
+    ports:
+      - "1500:80"
+    volumes:
+      - ./appsettings.json:/app/appsettings.json
+      - nuget-storage:/var/baget/packages
+    networks:
+      - nuget-network
+      - traefik_web
+    depends_on:
+      - nuget-db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nuget-server.rule=Host(`baget.example.com`)"
+      - "traefik.http.routers.nuget-server.entrypoints=web"
+      - "traefik.http.services.nuget-server.loadbalancer.server.port=80"
+      - "traefik.http.routers.nuget-server.service=nuget-server"
+
+  nuget-db:
+    image: postgres:15.6-alpine
+    hostname: nuget-db
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - nuget-db-storage:/var/lib/postgresql/data
+    networks:
+      - nuget-network
+
+volumes:
+  nuget-storage:
+  nuget-db-storage:
+
+networks:
+  nuget-network:
+    driver: overlay
+    attachable: true
+  traefik_web:
+    external: true
+

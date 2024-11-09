@@ -1,0 +1,36 @@
+version: "3.3"
+
+services:
+  traefik:
+    image: traefik:v3.1.0
+    ports:
+      - "80:80"      # HTTP
+      - "443:443"    # HTTPS
+      - "8080:8080"  # Traefik Dashboard
+    command:
+      - "--api.insecure=true"                        # Включить доступ к API (небезопасно)
+      - "--api.dashboard=true"                       # Включить панель управления
+      - "--log.level=ERROR"                          # Уровень логирования
+      - "--providers.docker=true"                    # Включить Docker провайдер
+      - "--providers.docker.exposedbydefault=false"  # Не показывать контейнеры по умолчанию
+      - "--providers.docker.network=traefik_web"     # Сеть Docker для Traefik
+      - "--entrypoints.web.address=:80"              # Точка входа для HTTP
+      - "--entrypoints.web-secured.address=:443"     # Точка входа для HTTPS
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Доступ к Docker сокету
+    deploy:
+      mode: global   # Запуск на всех узлах
+      placement:
+        constraints: [node.role == manager]  # Только на узлах с ролью manager
+    labels:
+      - "traefik.enable=true"                                           # Включает Traefik для этого контейнера
+      - "traefik.http.routers.traefik.rule=Host(`traefik.example.com`)" # Маршрутизирует запросы на домен `traefik.example.com`
+      - "traefik.http.routers.traefik.entrypoints=web"                  # Использует точку входа `web` (HTTP, порт 80)
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"   # Направляет трафик на порт 8080 внутри контейнера
+    networks:
+      - web
+
+networks:
+  web:
+    driver: overlay
+    attachable: true
