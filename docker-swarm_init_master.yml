@@ -1,0 +1,51 @@
+- hosts: master
+  become: true
+  tasks:
+    - name: Install required system packages
+      apt:
+        name:
+          - build-essential
+          - python3-dev
+          - libssl-dev
+          - libffi-dev
+          - python3-setuptools
+          - python3-wheel
+        state: present
+
+    - name: Create virtual environment for Docker Compose
+      command: python3 -m venv /opt/docker_venv
+
+    - name: Upgrade pip in virtual environment
+      command: /opt/docker_venv/bin/pip install --upgrade pip setuptools
+
+    - name: Install Docker Python client in virtual environment
+      command: /opt/docker_venv/bin/pip install docker
+
+    - name: Install Docker Compose using apt
+      apt:
+        name: docker-compose
+        state: present
+
+    - name: Check if node is already part of a swarm
+      shell: docker info --format '{{"{{.Swarm.LocalNodeState}}"}}'
+      register: swarm_state
+      ignore_errors: true
+
+    - name: Leave the current Swarm cluster if already part of one
+      command: docker swarm leave --force
+      when: swarm_state.stdout == 'active'
+
+    - name: Initialize the Docker Swarm cluster
+      command: docker swarm init --advertise-addr {{ ansible_host }}
+      register: swarm_init
+      ignore_errors: true
+
+    - name: Ensure Docker Swarm is initialized
+      fail:
+        msg: "Docker Swarm initialization failed"
+      when: swarm_init.rc != 0
+
+    - name: Display swarm init output
+      debug:
+        var: swarm_init.stdout_lines
+      when: swarm_init.rc == 0

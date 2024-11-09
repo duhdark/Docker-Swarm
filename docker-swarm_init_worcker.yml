@@ -1,0 +1,52 @@
+- hosts: master
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Get join command
+      shell: 'docker swarm join-token worker | grep join'
+      register: join_command_raw
+      ignore_errors: true
+
+    - name: Ensure join command is obtained
+      fail:
+        msg: "Failed to obtain join command"
+      when: join_command_raw.rc != 0
+
+    - name: Set join command
+      set_fact:
+        join_command: '{{ join_command_raw.stdout_lines[0].strip() }}'
+      when: join_command_raw.rc == 0
+
+    - name: Debug | Print join command
+      debug:
+        var: join_command
+
+- hosts: workers
+  become: true
+  tasks:
+    - name: Leave the current Swarm cluster if already part of one
+      shell: 'docker swarm leave'
+      register: join_result
+      ignore_errors: true
+
+    - name: Join new cluster
+      shell: "{{ hostvars['master'].join_command }}"
+      register: join_result
+      ignore_errors: true
+
+- hosts: master
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Check nodes on the Swarm cluster
+      shell: 'docker node ls'
+      register: docker_node_info
+      ignore_errors: true
+
+    - name: Extract relevant lines from docker node ls
+      set_fact:
+        relevant_lines: "{{ docker_node_info.stdout_lines[1:] }}"
+
+    - name: Debug | Print join result
+      debug:
+        var: relevant_lines
