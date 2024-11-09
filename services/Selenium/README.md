@@ -23,5 +23,5 @@ docker stack rm selenium-hub
 ```
 * Адрес Selenium 
 ```
-master ansible_host=x.x.x.x:8080
+master ansible_host=x.x.x.x:4444
 ```

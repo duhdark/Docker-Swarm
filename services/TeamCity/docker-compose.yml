@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:9.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: teamcity
+      MYSQL_USER: teamcity
+      MYSQL_PASSWORD: teamcity_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - teamcity-network
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+  teamcity-server:
+    image: jetbrains/teamcity-server:2024.03.3
+    environment:
+      TEAMCITY_SERVER_MEM_OPTS: -Xmx2g -XX:MaxPermSize=270m -XX:+UseCompressedOops
+    ports:
+      - "8111:8111"
+    volumes:
+      - teamcity_data:/data/teamcity_server/datadir
+      - teamcity_jdbc:/data/teamcity_server/datadir/lib/jdbc
+      - teamcity_logs:/opt/teamcity/logs
+    networks:
+      - teamcity-network
+      - traefik_web
+    depends_on:
+      - mysql
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.teamcity-server.rule=Host(`teamcity.example.com`)"
+      - "traefik.http.routers.teamcity-server.entrypoints=web"
+      - "traefik.http.services.teamcity-server.loadbalancer.server.port=8111"
+      - "traefik.http.routers.teamcity-server.service=teamcity-server"
+
+volumes:
+  mysql_data:
+  teamcity_data:
+  teamcity_jdbc:
+  teamcity_logs:
+
+networks:
+  teamcity-network:
+    driver: overlay
+    attachable: true
+  traefik_web:
+    external: true
