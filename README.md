@@ -20,11 +20,11 @@
 **hosts**
 ```
 [masters]
-master ansible_host=x.x.x.x #docker-node1
+master ansible_host=x.x.x.x
 
 [workers]
-node-1 ansible_host=x.x.x.x #docker-node2
-node-2 ansible_host=x.x.x.x #docker-node3
+node-1 ansible_host=x.x.x.x
+node-2 ansible_host=x.x.x.x
 
 [all:vars]
 ansible_python_interpreter=/usr/bin/python3
