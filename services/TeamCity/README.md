@@ -6,7 +6,15 @@ TeamCity — это мощный сервер непрерывной интег�
 
 * Запуск TeamCity
 ```
-docker stack deploy -c docker-compose.yml teamcity # После создания контейнера и если планируется использовать MySQL, необходимо внутри контейнера в директорию lib/jdbc положить mysql-connector-j-9.0.0.jar и перезапустить контейнер
+docker stack deploy -c docker-compose.yml teamcity
+```
+* Копирование mysql connector
+```
+docker cp mysql-connector-j-9.0.0.jar $(docker ps -q -f name=teamcity_teamcity-server):/data/teamcity_server/datadir/lib/jdbc
+```
+* Копирование бекапа
+```
+docker cp TeamCity_Backup_20240818_173946.zip $(docker ps -q -f name=teamcity_teamcity-server):/data/teamcity_server/datadir
 ```
 * Перезапуск TeamCity
 ```
